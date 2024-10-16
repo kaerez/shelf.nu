@@ -40,13 +40,18 @@ import {
   CheckIcon,
   PartialCheckboxIcon,
   AssetLabel,
-  LockIcon,
+  NoPermissionsIcon,
   ActiveSwitchIcon,
   ScanIcon,
   MapIcon,
   ToolIcon,
   AddTagsIcon,
   RemoveTagsIcon,
+  ColumnsIcon,
+  LockIcon,
+  ImageIcon,
+  FilterIcon,
+  SortIcon,
   AvailableIcon,
   UnavailableIcon,
 } from "../icons/library";
@@ -103,6 +108,11 @@ export type IconType =
   | "scan"
   | "tool"
   | "rows"
+  | "columns"
+  | "no-permissions"
+  | "image"
+  | "filter"
+  | "sort"
   | "available"
   | "unavailable";
 
@@ -155,12 +165,17 @@ export const iconsMap: IconsMap = {
   "release-custody": <CheckInIcon />,
   "partial-checkbox": <PartialCheckboxIcon />,
   "asset-label": <AssetLabel />,
-  lock: <LockIcon />,
+  "no-permissions": <NoPermissionsIcon />,
   activate: <ActiveSwitchIcon />,
   deactivate: <XIcon />,
   scan: <ScanIcon />,
   tool: <ToolIcon />,
   rows: <RowsIcon />,
+  columns: <ColumnsIcon />,
+  lock: <LockIcon />,
+  image: <ImageIcon />,
+  filter: <FilterIcon />,
+  sort: <SortIcon />,
   available: <AvailableIcon />,
   unavailable: <UnavailableIcon />,
 };

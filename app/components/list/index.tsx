@@ -8,6 +8,7 @@ import {
   setSelectedBulkItemsAtom,
 } from "~/atoms/list";
 
+import { useAssetIndexMode } from "~/hooks/use-asset-index-mode";
 import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
 import { ALL_SELECTED_KEY, isSelectingAllItems } from "~/utils/list";
 import { tw } from "~/utils/tw";
@@ -73,6 +74,9 @@ export type ListProps = {
    * Allow bulk actions on List by providing Bulk actions dropdown
    */
   bulkActions?: React.ReactElement;
+
+  /** Optionally recieve an element for custom pagination */
+  customPagination?: React.ReactElement;
 };
 
 /**
@@ -89,6 +93,7 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
     customEmptyStateContent,
     emptyStateClassName,
     bulkActions,
+    customPagination,
   }: ListProps,
   ref
 ) {
@@ -102,6 +107,7 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
   const selectedBulkItems = useAtomValue(selectedBulkItemsAtom);
 
   const hasSelectedAllItems = isSelectingAllItems(selectedBulkItems);
+  const { modeIsAdvanced } = useAssetIndexMode();
 
   const { isBaseOrSelfService } = useUserRoleHelper();
 
@@ -120,7 +126,9 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
     <div
       ref={ref}
       className={tw(
-        "-mx-4  overflow-auto border border-gray-200  bg-white md:mx-0 md:rounded",
+        "-mx-4 border border-gray-200 bg-white md:mx-0 md:rounded",
+        customPagination && "mb-[50px]",
+        modeIsAdvanced ? "flex h-full flex-col" : "overflow-auto",
         className
       )}
     >
@@ -197,7 +205,6 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
             </div>
             {!isBaseOrSelfService ? <div>{bulkActions}</div> : null}
           </div>
-
           <Table
             className={tw(
               "list",
@@ -224,9 +231,11 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
               ))}
             </tbody>
           </Table>
-          <Pagination />
+          {!customPagination && <Pagination />}
         </>
       )}
+      {/*  Always render it, even if no items in list. */}
+      {customPagination && customPagination}
     </div>
   );
 });
