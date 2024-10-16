@@ -9,7 +9,7 @@ import {
 } from "~/atoms/list";
 
 import { useAssetIndexMode } from "~/hooks/use-asset-index-mode";
-import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
+
 import { ALL_SELECTED_KEY, isSelectingAllItems } from "~/utils/list";
 import { tw } from "~/utils/tw";
 import BulkListItemCheckbox from "./bulk-actions/bulk-list-item-checkbox";
@@ -109,8 +109,6 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
   const hasSelectedAllItems = isSelectingAllItems(selectedBulkItems);
   const { modeIsAdvanced } = useAssetIndexMode();
 
-  const { isBaseOrSelfService } = useUserRoleHelper();
-
   const hasSelectedItems = selectedBulkItemsCount > 0;
 
   /**
@@ -203,16 +201,13 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
                 </div>
               </div>
             </div>
-            {!isBaseOrSelfService ? <div>{bulkActions}</div> : null}
+            {bulkActions ? <div>{bulkActions}</div> : null}
           </div>
           <Table
-            className={tw(
-              "list",
-              bulkActions && !isBaseOrSelfService && "list-with-bulk-actions"
-            )}
+            className={tw("list", bulkActions && "list-with-bulk-actions")}
           >
             <ListHeader
-              bulkActions={!isBaseOrSelfService ? bulkActions : undefined}
+              bulkActions={bulkActions}
               children={headerChildren}
               hideFirstColumn={hideFirstHeaderColumn}
             />
@@ -223,9 +218,7 @@ export const List = React.forwardRef<HTMLDivElement, ListProps>(function List(
                   key={`${item.id}-${i}`}
                   navigate={navigate}
                 >
-                  {bulkActions && !isBaseOrSelfService ? (
-                    <BulkListItemCheckbox item={item} />
-                  ) : null}
+                  {bulkActions ? <BulkListItemCheckbox item={item} /> : null}
                   <ItemComponent item={item} />
                 </ListItem>
               ))}

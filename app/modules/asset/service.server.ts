@@ -610,6 +610,7 @@ async function getAssets(params: {
             select: {
               custodian: {
                 select: {
+                  userId: true,
                   name: true,
                   user: {
                     select: {

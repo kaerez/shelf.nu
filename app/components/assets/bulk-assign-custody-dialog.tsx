@@ -1,5 +1,8 @@
+import { useLoaderData } from "@remix-run/react";
 import { useZorm } from "react-zorm";
 import { z } from "zod";
+import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
+import { type loader } from "~/routes/_layout+/assets._index";
 import { resolveTeamMemberName } from "~/utils/user";
 import { stringToJSONSchema } from "~/utils/zod";
 import { BulkUpdateDialogContent } from "../bulk-update-dialog/bulk-update-dialog";
@@ -16,12 +19,18 @@ export const BulkAssignCustodySchema = z.object({
 export default function BulkAssignCustodyDialog() {
   const zo = useZorm("BulkAssignCustody", BulkAssignCustodySchema);
 
+  const { isSelfService } = useUserRoleHelper();
+  // @ts-ignore
+  const { rawTeamMembers } = useLoaderData<typeof loader>();
+
   return (
     <BulkUpdateDialogContent
       ref={zo.ref}
       type="assign-custody"
-      title="Assign custody of assets"
-      description="These assets are currently available. You're about to assign custody to one of your team members."
+      title={`${isSelfService ? "Take" : "Assign"} custody of assets`}
+      description={`These assets are currently available. You're about to assign custody to ${
+        isSelfService ? "yourself" : "one of your team members"
+      }.`}
       actionUrl="/api/assets/bulk-assign-custody"
       arrayFieldId="assetIds"
     >
@@ -29,7 +38,15 @@ export default function BulkAssignCustodyDialog() {
         <div className="modal-content-wrapper">
           <div className="relative z-50 mb-8">
             <DynamicSelect
-              disabled={disabled}
+              defaultValue={
+                isSelfService && rawTeamMembers?.length > 0
+                  ? JSON.stringify({
+                      id: rawTeamMembers[0].id,
+                      name: resolveTeamMemberName(rawTeamMembers[0]),
+                    })
+                  : undefined
+              }
+              disabled={disabled || isSelfService}
               model={{
                 name: "teamMember",
                 queryKey: "name",

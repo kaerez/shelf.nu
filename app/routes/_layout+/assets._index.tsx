@@ -39,6 +39,10 @@ import { Td, Th } from "~/components/table";
 import When from "~/components/when/when";
 import { db } from "~/database/db.server";
 
+import {
+  useClearValueFromParams,
+  useSearchParamHasValue,
+} from "~/hooks/search-params";
 import { useAssetIndexColumns } from "~/hooks/use-asset-index-columns";
 import { useAssetIndexMode } from "~/hooks/use-asset-index-mode";
 import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
@@ -269,7 +273,14 @@ export const AssetsList = ({
   const isSwappingMode = modeFetcher?.formData;
 
   const columns = useAssetIndexColumns();
-  const { roles } = useUserRoleHelper();
+  const { roles, isBase } = useUserRoleHelper();
+  const searchParams: string[] = ["category", "tag", "location"];
+  if (!disableTeamMemberFilter) {
+    searchParams.push("teamMember");
+  }
+  const hasFiltersToClear = useSearchParamHasValue(...searchParams);
+
+  const clearFilters = useClearValueFromParams(...searchParams);
 
   const headerChildren = modeIsSimple ? (
     <>
@@ -317,7 +328,9 @@ export const AssetsList = ({
         navigate={
           modeIsSimple ? (itemId) => navigate(`/assets/${itemId}`) : undefined
         }
-        bulkActions={disableBulkActions ? undefined : <BulkActionsDropdown />}
+        bulkActions={
+          disableBulkActions || isBase ? undefined : <BulkActionsDropdown />
+        }
         customEmptyStateContent={
           customEmptyState ? customEmptyState : undefined
         }
