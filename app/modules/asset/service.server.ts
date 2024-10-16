@@ -82,6 +82,7 @@ import type {
 import {
   getAssetsWhereInput,
   getLocationUpdateNoteContent,
+  parseFilters,
 } from "./utils.server";
 import { createKitsIfNotExists } from "../kit/service.server";
 
@@ -669,8 +670,7 @@ async function getAssets(params: {
 }
 
 /**
- * Fetches assets from AssetSearchView
- * This is used to have a more advanced search however its less performant
+ * Fetches assets from AssetSearchView with advanced filtering and sorting
  */
 export async function getAdvancedPaginatedAndFilterableAssets({
   request,
@@ -693,37 +693,55 @@ export async function getAdvancedPaginatedAndFilterableAssets({
   try {
     const skip = page > 1 ? (page - 1) * perPage : 0;
     const take = Math.min(Math.max(perPage, 1), 100);
+    const parsedFilters = parseFilters(filters);
 
-    const whereClause = generateWhereClause(organizationId, search);
+    const whereClause = generateWhereClause(
+      organizationId,
+      search,
+      parsedFilters
+    );
     const { orderByClause, customFieldSortings } = parseSortingOptions(
       searchParams.getAll("sortBy")
     );
     const customFieldSelect = generateCustomFieldSelect(customFieldSortings);
 
-    const query = Prisma.sql`
-      WITH asset_query AS (
+    // Construct the main query
+    const mainQuery = Prisma.sql`
+      SELECT 
         ${assetQueryFragment}
         ${customFieldSelect}
-        ${assetQueryJoins}
-        ${whereClause}
-        GROUP BY a.id, k.id, k.name, c.id, c.name, c.color, l.name, cu.id, tm.name, u.id, u."firstName", u."lastName", u."profilePicture", u.email, b.id, bu.id, bu."firstName", bu."lastName", bu."profilePicture", bu.email, btm.id, btm.name
-      ), 
+      FROM public."Asset" a
+      ${assetQueryJoins}
+      ${whereClause}
+      GROUP BY a.id, k.id, k.name, c.id, c.name, c.color, l.name, cu.id, tm.name, u.id, u."firstName", u."lastName", u."profilePicture", u.email, b.id, bu.id, bu."firstName", bu."lastName", bu."profilePicture", bu.email, btm.id, btm.name
+    `;
+
+    // Construct the count query
+    const countQuery = Prisma.sql`
+      SELECT COUNT(DISTINCT a.id)::integer AS total_count
+      FROM public."Asset" a
+      ${assetQueryJoins}
+      ${whereClause}
+    `;
+
+    // Combine queries using CTEs
+    const query = Prisma.sql`
+      WITH asset_query AS (${mainQuery}), 
       sorted_asset_query AS (
         SELECT * FROM asset_query
         ${Prisma.raw(orderByClause)}
         LIMIT ${take}
         OFFSET ${skip}
       ),
-      count_query AS (
-        SELECT COUNT(*)::integer AS total_count
-        FROM public."Asset" a
-        ${whereClause}
-      )
+      count_query AS (${countQuery})
       SELECT 
         (SELECT total_count FROM count_query) AS total_count,
         ${assetReturnFragment}
       FROM sorted_asset_query aq;
     `;
+
+    console.log(query.sql);
+    console.log(query.values);
 
     const result = await db.$queryRaw<AdvancedIndexQueryResult>(query);
     const totalAssets = result[0].total_count;

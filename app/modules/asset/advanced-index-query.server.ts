@@ -1,23 +1,212 @@
 import { Prisma } from "@prisma/client";
-import type { CustomFieldType } from "@prisma/client";
+import type { AssetStatus, CustomFieldType } from "@prisma/client";
+import type { Filter } from "~/components/assets/assets-index/advanced-filters/types";
 import type { CustomFieldSorting } from "./types";
 
-// 1. Filtering
+/**
+ * Generates the WHERE clause for the asset query based on the provided filters
+ * @param organizationId - The ID of the organization
+ * @param search - The search string (if any)
+ * @param filters - An array of Filter objects
+ * @returns Prisma.Sql object representing the WHERE clause
+ */
 export function generateWhereClause(
   organizationId: string,
-  search: string | null
+  search: string | null,
+  filters: Filter[]
 ): Prisma.Sql {
   let whereClause = Prisma.sql`WHERE a."organizationId" = ${organizationId}`;
 
+  // Add search condition if search string is provided
   if (search) {
     const words = search.trim().split(/\s+/).filter(Boolean);
     if (words.length > 0) {
       const searchVector = words.join(" & ");
-      whereClause = Prisma.sql`${whereClause} AND (to_tsvector('english', a."title" || ' ' || COALESCE(a."description", '')) @@ to_tsquery('english', ${searchVector}))`;
+      whereClause = Prisma.sql`${whereClause} AND (to_tsvector('english', a.title) @@ to_tsquery('english', ${searchVector}))`;
     }
   }
 
+  // Process each filter
+  filters.forEach((filter) => {
+    const { name, type, operator, value } = filter;
+
+    switch (type) {
+      case "string":
+        whereClause = addStringFilter(whereClause, name, operator, value);
+        break;
+      case "enum":
+        whereClause = addEnumFilter(whereClause, name, operator, value);
+        break;
+      case "text":
+        whereClause = addTextFilter(whereClause, name, operator, value);
+        break;
+      case "number":
+        whereClause = addNumberFilter(whereClause, name, operator, value);
+        break;
+      case "boolean":
+        whereClause = addBooleanFilter(whereClause, name, value);
+        break;
+      case "date":
+        whereClause = addDateFilter(whereClause, name, operator, value);
+        break;
+    }
+  });
+
+  // Return the WHERE clause without the GROUP BY
   return whereClause;
+}
+
+/**
+ * Adds a string filter to the WHERE clause
+ */
+function addStringFilter(
+  whereClause: Prisma.Sql,
+  field: string,
+  operator: string,
+  value: string
+): Prisma.Sql {
+  switch (operator) {
+    case "is":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" = ${value}`;
+    case "isNot":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(
+        field
+      )}" != ${value}`;
+    default:
+      return whereClause;
+  }
+}
+
+/**
+ * Adds an enum filter to the WHERE clause
+ */
+function addEnumFilter(
+  whereClause: Prisma.Sql,
+  field: string,
+  operator: string,
+  value: AssetStatus | AssetStatus[]
+): Prisma.Sql {
+  switch (operator) {
+    case "is":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" = ${value}`;
+    case "isNot":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(
+        field
+      )}" != ${value}`;
+    case "in":
+      if (Array.isArray(value)) {
+        return Prisma.sql`${whereClause} AND a."${Prisma.raw(
+          field
+        )}" IN (${Prisma.join(value)})`;
+      }
+      return whereClause;
+    default:
+      return whereClause;
+  }
+}
+
+/**
+ * Adds a text filter to the WHERE clause
+ */
+function addTextFilter(
+  whereClause: Prisma.Sql,
+  field: string,
+  operator: string,
+  value: string
+): Prisma.Sql {
+  switch (operator) {
+    case "contains":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(
+        field
+      )}" ILIKE ${`%${value}%`}`;
+    default:
+      return whereClause;
+  }
+}
+
+/**
+ * Adds a number filter to the WHERE clause
+ */
+function addNumberFilter(
+  whereClause: Prisma.Sql,
+  field: string,
+  operator: string,
+  value: number | number[]
+): Prisma.Sql {
+  switch (operator) {
+    case "is":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" = ${value}`;
+    case "isNot":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(
+        field
+      )}" != ${value}`;
+    case "gt":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" > ${value}`;
+    case "lt":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" < ${value}`;
+    case "gte":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(
+        field
+      )}" >= ${value}`;
+    case "lte":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(
+        field
+      )}" <= ${value}`;
+    case "between":
+      if (Array.isArray(value) && value.length === 2) {
+        return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" BETWEEN ${
+          value[0]
+        } AND ${value[1]}`;
+      }
+      return whereClause;
+    default:
+      return whereClause;
+  }
+}
+
+/**
+ * Adds a boolean filter to the WHERE clause
+ */
+function addBooleanFilter(
+  whereClause: Prisma.Sql,
+  field: string,
+  value: boolean
+): Prisma.Sql {
+  return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" = ${value}`;
+}
+
+/**
+ * Adds a date filter to the WHERE clause
+ */
+function addDateFilter(
+  whereClause: Prisma.Sql,
+  field: string,
+  operator: string,
+  value: string | string[]
+): Prisma.Sql {
+  switch (operator) {
+    case "is":
+      return Prisma.sql`${whereClause} AND DATE(a."${Prisma.raw(
+        field
+      )}") = ${value}`;
+    case "isNot":
+      return Prisma.sql`${whereClause} AND DATE(a."${Prisma.raw(
+        field
+      )}") != ${value}`;
+    case "before":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" < ${value}`;
+    case "after":
+      return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" > ${value}`;
+    case "between":
+      if (Array.isArray(value) && value.length === 2) {
+        return Prisma.sql`${whereClause} AND a."${Prisma.raw(field)}" BETWEEN ${
+          value[0]
+        } AND ${value[1]}`;
+      }
+      return whereClause;
+    default:
+      return whereClause;
+  }
 }
 
 // 2. Sorting

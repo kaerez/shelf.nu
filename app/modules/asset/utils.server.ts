@@ -1,5 +1,10 @@
 import type { Asset, AssetStatus, Location, Prisma } from "@prisma/client";
 import { z } from "zod";
+import type {
+  Filter,
+  FilterFieldType,
+  FilterOperator,
+} from "~/components/assets/assets-index/advanced-filters/types";
 import { getParamsValues } from "~/utils/list";
 
 export function getLocationUpdateNoteContent({
@@ -143,4 +148,67 @@ export function getAssetsWhereInput({
   }
 
   return where;
+}
+
+// Add this function to parse the filters string
+export function parseFilters(filtersString: string): Filter[] {
+  const searchParams = new URLSearchParams(filtersString);
+  const filters: Filter[] = [];
+
+  searchParams.forEach((value, key) => {
+    const [operator, filterValue] = value.split(":");
+    const filter: Filter = {
+      name: key,
+      type: getFilterFieldType(key),
+      operator: operator as FilterOperator,
+      value: parseFilterValue(key, operator as FilterOperator, filterValue),
+    };
+    filters.push(filter);
+  });
+
+  return filters;
+}
+
+// Helper function to determine the FilterFieldType based on the field name
+function getFilterFieldType(fieldName: string): FilterFieldType {
+  switch (fieldName) {
+    case "id":
+      return "string";
+    case "status":
+      return "enum";
+    case "description":
+      return "text";
+    case "valuation":
+      return "number";
+    case "availableToBook":
+      return "boolean";
+    case "createdAt":
+      return "date";
+    default:
+      return "string";
+  }
+}
+
+// Helper function to parse filter values based on their type
+function parseFilterValue(
+  field: string,
+  operator: FilterOperator,
+  value: string
+): any {
+  switch (field) {
+    case "valuation":
+      return operator === "between"
+        ? value.split(",").map(Number)
+        : Number(value);
+    case "availableToBook":
+      return value.toLowerCase() === "true";
+    case "createdAt":
+      return operator === "between" ? value.split(",") : value;
+    case "status":
+      return operator === "in"
+        ? (value.split(",") as AssetStatus[])
+        : (value as AssetStatus);
+    default:
+      return value;
+  }
 }
