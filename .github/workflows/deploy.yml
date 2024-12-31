@@ -4,23 +4,12 @@ on:
   push:
     branches:
       - main
-      - dev
 
 permissions:
   actions: write
   contents: read
 
 jobs:
-  tests:
-    uses: ./.github/workflows/test.yml
-    secrets:
-      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-      SUPABASE_ANON_PUBLIC: ${{ secrets.SUPABASE_ANON_PUBLIC }}
-      SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SERVER_URL: ${{ secrets.SERVER_URL }}
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
   build:
     name: 🐳 Build
     # only build/deploy main branch on pushes
@@ -113,12 +102,6 @@ jobs:
 
       - name: 🎈 Setup Fly
         uses: superfly/flyctl-actions/setup-flyctl@v1.4
-
-      - name: 🚀 Deploy Staging
-        if: ${{ github.ref == 'refs/heads/dev' }}
-        run: flyctl deploy --remote-only --build-arg COMMIT_SHA=${{ github.sha }} --app ${{ steps.app_name.outputs.value }}-staging
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: 🚀 Deploy Production
         if: ${{ github.ref == 'refs/heads/main' }}
