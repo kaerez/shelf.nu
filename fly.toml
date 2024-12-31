@@ -1,4 +1,4 @@
-app = "shelf-webapp"
+app = "shelf-ksec"
 primary_region = "ams"
 kill_signal = "SIGINT"
 kill_timeout = "5s"
@@ -43,4 +43,3 @@ method = "GET"
 timeout = "2s"
 path = "/healthcheck"
 protocol = "http"
-
