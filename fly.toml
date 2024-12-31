@@ -7,8 +7,12 @@ swap_size_mb = 512
 [experimental]
 auto_rollback = true
 
+[build]
+  dockerfile = "Dockerfile.image"
+
 [deploy]
 strategy = "rolling"
+wait_timeout = "10m"
 
 [env]
 NODE_ENV = "production"
